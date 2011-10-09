@@ -18,6 +18,8 @@
       true (println (/ dbltime 1000000000.0 "s")))))
 
 (defmacro time2 [divisor expr]
+  "Like clojure.core/time, except with prettier output and an option
+  to divide the elapsed time by some given divisor."
   `(let [start# (. System (nanoTime))
          ret# ~expr]
      (printtime (/ (- (. System (nanoTime)) start#)
@@ -57,6 +59,6 @@
         thesum
         (recur (unchecked-add i minusone) (unchecked-add i thesum))))))
 
-(defbench "Recursive consecutive sum" 10000 (recursive-consecutive-sum 1000 0))
-(defbench "Fast consecutive sum" 10000 (fast-consecutive-sum 1000))
+(defbench "Recursive consecutive sum" 50000 (recursive-consecutive-sum 1000 0))
+(defbench "Fast consecutive sum" 100000 (fast-consecutive-sum 1000))
 (defbench "Underflow consecutive sum" 10000 (=consecutive-sum 1000 0))

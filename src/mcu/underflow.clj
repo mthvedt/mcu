@@ -10,10 +10,10 @@
   (process [self cont]))
 
 (defn- process-object [self cont]
-    (let [contfn (first cont)]
-      (if (nil? contfn)
-        [nil nil]
-        [#(contfn self) (rest cont)])))
+  (let [contfn (first cont)]
+    (if (nil? contfn)
+      [nil nil]
+      [#(contfn self) (rest cont)])))
 
 (extend Object Pval {:process process-object})
 (extend nil Pval {:process process-object})
@@ -35,12 +35,25 @@
 
 ; This appears to make little speed difference... for now...
 (defmacro =tailcall [thefn & args]
-    `(reify Pval
-       (process [self# cont#] [#(~thefn ~@args) cont#])))
+  `(reify Pval
+     (process [self# cont#] [#(~thefn ~@args) cont#])))
+
+(defmacro =let [[x y] & body]
+  `(reify Pval
+     (process [self# cont#]
+       [(fn [] ~y)
+        (cons (fn [~x] ~@body) cont#)])))
+
+#_(defmacro =call/cc [thefn & args]
+  `(reify Pval
+     (process [self# cont#] [(fn []
+                               (thefn (fn []
+                                        (reify Pval
+                                          (process [self2# cont2#])))))])))
 
 #_(deftype PTailcall [thefn]
-  Pval
-  (process [self cont] [thefn cont]))
+    Pval
+    (process [self cont] [thefn cont]))
 
 #_(defmacro =tailcall [thefn & args]
-  `(PTailcall. #(~thefn ~@args)))
+    `(PTailcall. #(~thefn ~@args)))
