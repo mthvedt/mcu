@@ -38,11 +38,22 @@
   `(reify Pval
      (process [self# cont#] [#(~thefn ~@args) cont#])))
 
-(defmacro =let [[x y] & body]
+(defmacro =let [bindings & body]
+  (if (empty? bindings)
+    `(do ~@body)
+    (let [tvar (first bindings)
+          tval (second bindings)]
+      (if (nil? tval)
+        (throw (IllegalArgumentException.
+                 "=let requires an even number of forms in binding vector"))
+        `(=letone [~tvar ~tval]
+                  (=let [~@(rest (rest bindings))] ~@body))))))
+
+(defmacro =letone [[tvar tval] & body]
   `(reify Pval
      (process [self# cont#]
-       [(fn [] ~y)
-        (cons (fn [~x] ~@body) cont#)])))
+       [(fn [] ~tval)
+        (cons (fn [~tvar] ~@body) cont#)])))
 
 #_(defmacro =call/cc [thefn & args]
   `(reify Pval
