@@ -4,9 +4,18 @@
 #_(todo def bench as though its a test, def run-benchmarks macro)
 
 (def
-  ^{:doc "When this is not false,
-         runs benchmarks defined with the bench macro."}
+  ^{:doc "When this is true,
+         compiles benchmarks defined with the bench macro."}
   *load-benchmarks* true)
+
+(def
+  ^{:doc "When this is true,
+         runs compiled benchmarks defined with the bench macro."}
+  *run-benchmarks* true)
+
+(def
+  ^{:doc ""}
+  *bench-out* System/out)
 
 (defn- printtime [time-in-nanos]
   (print "Elapsed time per run: ")
@@ -28,14 +37,13 @@
 (defmacro defbench [thename times microexpr]
   "A better microbenchmark macro that runs gc, finalizers,
   and warms up the JIT compiler.
-  The microbenchmark may be run thousands of times to warm up the JIT compiler,
-  so make sure it is legitly micro.
-
+  The microbenchmark may be run thousands of times
+  to warm up the JIT compiler.
   If *run-benchmarks* is not false,
   bench will prepare the JVM as described above
   then time how long it takes to run the given expr the given # of times,
   printing results to System/out."
-  `(if *load-benchmarks*
+  `(if *run-benchmarks*
      (do
        (println "Warming up:" ~thename)
        (dotimes [i# 10000] ~microexpr)
@@ -59,6 +67,7 @@
         thesum
         (recur (unchecked-add i minusone) (unchecked-add i thesum))))))
 
-(defbench "Recursive consecutive sum" 50000 (recursive-consecutive-sum 1000 0))
+(defbench "Recursive consecutive sum" 50000
+          (recursive-consecutive-sum 1000 0))
 (defbench "Fast consecutive sum" 100000 (fast-consecutive-sum 1000))
 (defbench "Underflow consecutive sum" 10000 (=consecutive-sum 1000 0))
