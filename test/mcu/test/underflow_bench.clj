@@ -71,3 +71,15 @@
           (recursive-consecutive-sum 1000 0))
 (defbench "Fast consecutive sum" 100000 (fast-consecutive-sum 1000))
 (defbench "Underflow consecutive sum" 10000 (=consecutive-sum 1000 0))
+
+(defn crawl-tree [tree]
+  (if (coll? tree)
+    (mapcat crawl-tree tree)
+    [tree]))
+
+(def test-tree [[[[1 2] 3] [4 5]] [6 [[7 8] [9 10]]]])
+
+(defbench "Tree crawler" 100000
+          (crawl-tree test-tree))
+(defbench "Underflow tree crawler" 100000
+          (=dft2 test-tree))
