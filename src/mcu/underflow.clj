@@ -9,11 +9,20 @@
 (defprotocol Pval
   (process [self cont]))
 
+(defn underflow [thefn & args]
+  (loop [trampfn #(apply thefn args)
+         cont nil]
+    (let [result (trampfn)
+          cont2 (process result cont)]
+      (if (nil? cont2)
+        result
+        (recur (first cont2) (rest cont2))))))
+
 (defn- process-object [self cont]
   (let [contfn (first cont)]
     (if (nil? contfn)
-      [nil self]
-      [#(contfn self) (rest cont)])))
+      nil
+      (cons #(contfn self) (rest cont)))))
 
 (extend Object Pval {:process process-object})
 (extend nil Pval {:process process-object})
@@ -24,25 +33,15 @@
        (defn ~sym ~@body)
        (defmacro ~=sym [~'& args#] `(underflow ~~sym ~@args#)))))
 
-(defn underflow [thefn & args]
-  (loop [trampfn #(apply thefn args)
-         cont nil]
-    (let [result (trampfn)
-          [newfn cont2] (process result cont)]
-      (if (nil? newfn)
-        cont2
-        (recur newfn cont2)))))
-
 (defmacro =tailcall [thefn & args]
   `(reify Pval
      (process [self# cont#]
-       [#(~thefn ~@args) cont#])))
+       (cons #(~thefn ~@args) cont#))))
 
 (defmacro =letone [[tvar tval] & body]
   `(reify Pval
      (process [self# cont#]
-       [(fn [] ~tval)
-        (cons (fn [~tvar] ~@body) cont#)])))
+       (cons (fn [] ~tval) (cons (fn [~tvar] ~@body) cont#)))))
 
 (defmacro =let [bindings & body]
   (if (empty? bindings)
@@ -58,20 +57,11 @@
 (defmacro =bind-cc [tvar & body]
   `(reify Pval
      (process [self# cont#]
-       [(fn [] (let [~tvar cont#] ~@body))
-        cont#])))
+       (cons (fn [] (let [~tvar cont#] ~@body)) cont#))))
 
 (defmacro =continue [cont rval]
   `(reify Pval
      (process [_ _]
        (if-let [cc# (first ~cont)]
-         [(fn [] (cc# ~rval))
-          (rest ~cont)]
-         [nil ~rval]))))
-
-#_(deftype PTailcall [thefn]
-    Pval
-    (process [self cont] [thefn cont]))
-
-#_(defmacro =tailcall [thefn & args]
-    `(PTailcall. #(~thefn ~@args)))
+         (cons (fn [] (cc# ~rval)) (rest ~cont))
+         ~rval))))
