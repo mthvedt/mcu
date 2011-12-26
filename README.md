@@ -17,6 +17,9 @@ However, given Clojure's emphasis on concurrent and/or lazy code,
 this absence is a little glaring; it means that you can't
 ever use vars with a computation that doesn't fit in the single-thread model.
 
+Underflow solves both these things. I'll tell you more
+once I get around to changing this documentation.
+
 ## License
 
 Copyright (C) 2011 Mike Thvedt

@@ -1,5 +1,5 @@
-(ns mcu.test.underflow-bench
-  (:use mcu.underflow mcu.test.underflow))
+(ns underflow.test.core-bench
+  (:use underflow.core underflow.test.core))
 
 #_(todo def bench as though its a test, def run-benchmarks macro)
 

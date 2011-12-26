@@ -1,4 +1,4 @@
-(ns mcu.underflow)
+(ns underflow.core)
 
 (defprotocol Continuer
   (process [self state]))
@@ -9,14 +9,14 @@
     (let [continuer (nextstep)
           [nextstep1 state1] (process continuer state)]
       (if (nil? state1) ; nil continuation terminates
-        nextstep1
+        continuer
         (recur nextstep1 state1)))))
 
 (defn- process-object [self state]
   (let [cont (get state ::cont)]
     (if-let [nextstep (first cont)]
       [#(nextstep self) (assoc state ::cont (rest cont))]
-      [self nil])))
+      [nil nil])))
 
 (extend Object Continuer {:process process-object})
 (extend nil Continuer {:process process-object})
@@ -31,11 +31,6 @@
   `(reify Continuer
      (process [_ state#]
        [#(~thefn ~@args) state#])))
-
-(defmacro =do [& body]
-  `(reify Continuer
-     (process [_ state#]
-       [(fn 
 
 (defmacro =letone [[tvar tval] & body]
   `(reify Continuer

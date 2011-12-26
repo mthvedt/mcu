@@ -1,5 +1,5 @@
-(ns mcu.test.underflow
-  (:use clojure.test mcu.underflow))
+(ns underflow.test.core
+  (:use clojure.test underflow.core))
 
 (=defn test1 [x] x)
 
