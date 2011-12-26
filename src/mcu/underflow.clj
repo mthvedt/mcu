@@ -1,25 +1,22 @@
 (ns mcu.underflow)
 
-(defprotocol Continuation
-  (continue [self rval]))
-
 (defprotocol Continuer
-  (process [self cont state]))
+  (process [self state]))
 
 (defn underflow [thefn & args]
   (loop [nextstep #(apply thefn args)
-         cont (reify Continuation ; the terminating continuation
-                (continue [self rval]
-                  [rval nil]))
          state {}]
     (let [continuer (nextstep)
-          [nextstep1 cont1 state1] (process continuer cont state)]
-      (if (nil? cont1) ; nil continuation terminates
+          [nextstep1 state1] (process continuer state)]
+      (if (nil? state1) ; nil continuation terminates
         nextstep1
-        (recur nextstep1 cont1 state1)))))
+        (recur nextstep1 state1)))))
 
-(defn- process-object [self cont state]
-  (continue cont self))
+(defn- process-object [self state]
+  (let [cont (get state ::cont)]
+    (if-let [nextstep (first cont)]
+      [#(nextstep self) (assoc state ::cont (rest cont))]
+      [self nil])))
 
 (extend Object Continuer {:process process-object})
 (extend nil Continuer {:process process-object})
@@ -32,17 +29,21 @@
 
 (defmacro =tailcall [thefn & args]
   `(reify Continuer
-     (process [self# cont# state#]
-       [#(~thefn ~@args) cont#])))
+     (process [_ state#]
+       [#(~thefn ~@args) state#])))
+
+(defmacro =do [& body]
+  `(reify Continuer
+     (process [_ state#]
+       [(fn 
 
 (defmacro =letone [[tvar tval] & body]
   `(reify Continuer
-     (process [self# cont# state#]
+     (process [_ state#]
        [(fn [] ~tval)
-        (reify Continuation
-          (continue [self# rval#]
-            [#(let [~tvar rval#] ~@body)
-             cont#]))])))
+        (assoc state# ::cont (cons (fn [rval#]
+                                     (let [~tvar rval#] ~@body))
+                                   (get state# ::cont)))])))
 
 (defmacro =let [bindings & body]
   (if (empty? bindings)
@@ -57,11 +58,14 @@
 
 (defmacro =bind-cc [tvar & body]
   `(reify Continuer
-     (process [self# cont# state#]
-       [(fn [] (let [~tvar cont#] ~@body))
-        cont#])))
+     (process [_ state#]
+       [#(let [~tvar (get state# ::cont)] ~@body)
+        state#])))
 
 (defmacro =continue [cont rval]
   `(reify Continuer
-     (process [self# cont# state#]
-       (continue ~cont ~rval))))
+     (process [_ state#]
+       (if-let [nextstep# (first ~cont)]
+         [#(nextstep# ~rval)
+          (assoc state# ::cont (rest ~cont))]
+         [~rval nil]))))
